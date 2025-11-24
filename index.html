@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radei Oficial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --accent-color: #059669; 
+            --glass-bg: rgba(15, 25, 20, 0.9); 
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050507;
+            color: #ffffff;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(20, 60, 40, 0.4) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(10, 30, 50, 0.4) 0%, transparent 40%);
+            padding-bottom: 140px;
+        }
+
+        /* --- Glassmorphism --- */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(5, 150, 105, 0.1);
+        }
+
+        /* --- Scrollbar --- */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
+
+        /* --- Visualizer --- */
+        .bar { width: 3px; background: var(--accent-color); animation: equalizer 1s infinite ease-in-out; border-radius: 2px; }
+        .bar:nth-child(2) { animation-delay: 0.1s; }
+        .bar:nth-child(3) { animation-delay: 0.2s; }
+        .bar:nth-child(4) { animation-delay: 0.3s; }
+        .playing .bar { display: block; }
+        .stopped .bar { height: 2px; animation: none; opacity: 0.3; }
+        @keyframes equalizer { 0%, 100% { height: 4px; } 50% { height: 16px; } }
+
+        /* --- Sliders --- */
+        input[type=range] {
+            -webkit-appearance: none; background: transparent; height: 4px; border-radius: 2px; cursor: pointer;
+            background-image: linear-gradient(to right, var(--accent-color), var(--accent-color));
+            background-size: 0% 100%; background-repeat: no-repeat; background-color: rgba(255, 255, 255, 0.15);
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: white; cursor: pointer;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5); transition: transform 0.1s;
+        }
+        input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.2); }
+        
+        .active-track { background: rgba(5, 150, 105, 0.15); border-color: rgba(5, 150, 105, 0.3); }
+        .active-track h4 { color: #34d399; }
+        .hover-accent:hover { color: var(--accent-color); }
+
+        .loop-off { color: #6b7280; opacity: 0.7; }
+        .loop-album { color: #ffffff; opacity: 1; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .loop-song { color: var(--accent-color); opacity: 1; text-shadow: 0 0 10px rgba(5, 150, 105, 0.5); position: relative; }
+        .disabled-track { opacity: 0.4; filter: grayscale(1); }
+
+        /* --- LYRICS STYLES --- */
+        #lyrics-overlay {
+            transition: opacity 0.5s ease, visibility 0.5s;
+        }
+        .lyric-line {
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transform-origin: left center;
+            cursor: pointer;
+            opacity: 0.4;
+            font-weight: 600;
+            font-size: 1.5rem;
+            color: #bbb;
+        }
+        .lyric-line:hover {
+            opacity: 0.8;
+            color: white;
+        }
+        .lyric-active {
+            opacity: 1 !important;
+            font-size: 2.2rem; /* Más grande */
+            color: var(--accent-color) !important;
+            text-shadow: 0 0 20px rgba(5, 150, 105, 0.4);
+            transform: scale(1.05);
+            margin-bottom: 1rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body class="selection:bg-emerald-600 selection:text-white">
+
+    <!-- Navbar -->
+    <nav class="fixed top-6 left-1/2 -translate-x-1/2 w-[90%] max-w-5xl z-50 px-6 py-3 glass rounded-full flex items-center justify-between shadow-2xl">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center">
+                <i data-lucide="music" class="w-4 h-4 text-white"></i>
+            </div>
+            <span class="font-bold tracking-tight">Radei</span>
+        </div>
+        <ul class="flex items-center gap-6 text-sm font-medium text-gray-400">
+            <li><a href="#music" class="hover:text-white transition-colors">Música</a></li>
+            <li><a href="#bio" class="hover:text-white transition-colors">Bio</a></li>
+            <li><a href="#support" class="hover:text-white transition-colors">Apoyar</a></li>
+        </ul>
+    </nav>
+
+    <!-- LYRICS OVERLAY (Hidden by default) -->
+    <div id="lyrics-overlay" class="fixed inset-0 z-40 bg-[#050507]/95 backdrop-blur-xl opacity-0 invisible flex flex-col md:flex-row">
+        <!-- Left: Cover Art Big -->
+        <div class="hidden md:flex w-1/2 items-center justify-center p-10">
+            <img id="lyrics-cover" src="" class="w-[80%] aspect-square object-cover rounded-2xl shadow-[0_0_60px_rgba(5,150,105,0.2)] border border-white/10">
+        </div>
+        <!-- Right: Lyrics Scroll -->
+        <div class="w-full md:w-1/2 h-full pt-32 pb-40 px-8 overflow-y-auto no-scrollbar relative flex flex-col items-start justify-start gap-6" id="lyrics-container">
+            <!-- JS Injects Lines Here -->
+            <div class="text-gray-500 text-2xl font-bold mt-20">Selecciona una canción para ver la letra...</div>
+        </div>
+        <!-- Close Button -->
+        <button onclick="toggleLyrics()" class="absolute top-8 right-8 p-3 glass rounded-full hover:bg-white/20 z-50">
+            <i data-lucide="x" class="w-6 h-6 text-white"></i>
+        </button>
+    </div>
+
+    <!-- Hero -->
+    <header class="relative pt-32 pb-12 px-6 flex flex-col items-center text-center max-w-4xl mx-auto">
+        <div class="relative w-40 h-40 md:w-52 md:h-52 rounded-full p-1 bg-gradient-to-tr from-emerald-500 to-teal-600 mb-6 shadow-[0_0_40px_rgba(5,150,105,0.3)]">
+            <img src="https://i.imgur.com/2jsRW0s.png" class="w-full h-full object-cover rounded-full border-4 border-[#050507]" alt="Artist Photo">
+            <div class="absolute bottom-2 right-2 bg-emerald-500 w-5 h-5 rounded-full border-4 border-[#050507]" title="Disponible para Booking"></div>
+        </div>
+        <h1 class="text-4xl md:text-6xl font-black mb-2 tracking-tighter">Radei</h1>
+        <p class="text-gray-400 max-w-xl text-lg mb-6">Músico, Productor & Mezclador independiente. Creando sensaciones de todas las maneras posibles.</p>
+        <div class="flex gap-4">
+            <a href="#support" class="px-6 py-2.5 bg-white text-black rounded-full font-bold hover:scale-105 transition-transform">Apoyar</a>
+            <button onclick="playRandom()" class="px-6 py-2.5 glass rounded-full font-medium hover:bg-white/10 transition-colors flex items-center gap-2 hover-accent">
+                <i data-lucide="shuffle" class="w-4 h-4"></i> Aleatorio
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="music" class="max-w-6xl mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Left: Navigation -->
+        <div class="lg:col-span-4 space-y-6">
+            <h2 class="text-xl font-bold flex items-center gap-2">
+                <i data-lucide="library" class="w-5 h-5 text-emerald-500"></i> Biblioteca
+            </h2>
+            <div id="album-list" class="space-y-4"></div>
+        </div>
+        <!-- Right: Tracklist -->
+        <div class="lg:col-span-8 space-y-6">
+            <div class="flex justify-between items-end border-b border-white/10 pb-4">
+                <div>
+                    <span id="view-subtitle" class="text-xs text-emerald-400 font-bold uppercase tracking-wider">Vista</span>
+                    <h2 id="view-title" class="text-3xl font-bold mt-1">Título</h2>
+                    <p id="view-meta" class="text-gray-400 text-sm">Detalles</p>
+                </div>
+                <div id="playlist-controls" class="hidden">
+                    <button onclick="toggleEditMode()" id="edit-btn" class="flex items-center gap-2 text-sm border border-white/20 px-4 py-2 rounded-full hover:bg-white/10 transition text-gray-300">
+                        <i data-lucide="pencil" class="w-4 h-4"></i> <span>Editar Lista</span>
+                    </button>
+                </div>
+            </div>
+            <div id="track-list" class="space-y-2 min-h-[300px]"></div>
+        </div>
+    </main>
+
+    <!-- Bio -->
+    <section id="bio" class="max-w-4xl mx-auto mt-24 px-6 mb-12">
+        <div class="glass-card p-8 md:p-12 relative overflow-hidden">
+            <div class="absolute -top-20 -right-20 w-64 h-64 bg-emerald-600/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="relative z-10">
+                <h2 class="text-3xl font-bold mb-6">Sobre mí</h2>
+                <div class="prose prose-invert text-gray-300 mb-8">
+                    <p>Inicié este proyecto como un pasatiempo, ahora lo estoy empezando a ver de una forma más profunda. Sigo siendo nuevo y claro que hay muchísimo por aprender y mejorar. Pero espero conectar con la mayoría.</p>
+                </div>
+                <div id="support" class="border-t border-white/10 pt-8">
+                    <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                        <i data-lucide="heart" class="w-5 h-5 text-emerald-500 fill-emerald-500"></i> Apoyame! :D
+                    </h3>
+                    <div class="flex flex-wrap gap-4">
+                        <a href="#" class="flex items-center gap-2 bg-[#064e3b] hover:bg-[#064e3b]/80 px-5 py-2.5 rounded-lg transition-colors font-medium text-white"><i data-lucide="credit-card" class="w-4 h-4"></i> PayPal</a>
+                        <a href="#" class="flex items-center gap-2 bg-[#115e59] hover:bg-[#115e59]/80 px-5 py-2.5 rounded-lg transition-colors font-medium text-white"><i data-lucide="coffee" class="w-4 h-4"></i> Patreon</a>
+                        <a href="#" class="flex items-center gap-2 glass px-5 py-2.5 rounded-lg hover:bg-white/10 transition-colors"><i data-lucide="instagram" class="w-4 h-4"></i> Instagram</a>
+                        <a href="#" class="flex items-center gap-2 glass px-5 py-2.5 rounded-lg hover:bg-white/10 transition-colors"><i data-lucide="youtube" class="w-4 h-4"></i> YouTube</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Player Bar -->
+    <div class="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl z-[60]">
+        <div class="glass rounded-2xl p-3 md:p-4 flex flex-col md:flex-row items-center gap-4 shadow-2xl bg-[#0a110f]/90 border border-white/10">
+            <!-- Info -->
+            <div class="flex items-center gap-4 w-full md:w-1/4">
+                <img id="player-img" src="" class="w-12 h-12 rounded-lg object-cover shadow-lg border border-white/10 bg-gray-800">
+                <div class="overflow-hidden flex-1">
+                    <h4 id="player-title" class="text-sm font-bold text-white truncate">Selecciona una canción</h4>
+                    <p id="player-artist" class="text-xs text-gray-400 truncate">Radei</p>
+                </div>
+            </div>
+            <!-- Controls -->
+            <div class="flex-1 flex flex-col items-center w-full">
+                <div class="flex items-center gap-6 mb-2">
+                    <button id="btn-loop" class="loop-off hover:scale-110 transition p-2" onclick="toggleLoop()"><i data-lucide="repeat" class="w-4 h-4"></i></button>
+                    <button class="text-gray-400 hover:text-white hover:scale-110 transition" onclick="prevTrack()"><i data-lucide="skip-back" class="w-5 h-5"></i></button>
+                    <button onclick="togglePlay()" class="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-105 transition text-black shadow-lg">
+                        <i id="play-icon" data-lucide="play" class="w-5 h-5 ml-0.5 fill-black"></i>
+                    </button>
+                    <button class="text-gray-400 hover:text-white hover:scale-110 transition" onclick="nextTrack()"><i data-lucide="skip-forward" class="w-5 h-5"></i></button>
+                    <!-- NEW LYRICS BUTTON -->
+                    <button onclick="toggleLyrics()" class="text-gray-400 hover-accent transition tooltip p-2" title="Ver Letra">
+                        <i data-lucide="mic-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="w-full flex items-center gap-3 group">
+                    <span id="current-time" class="text-[10px] text-gray-400 font-mono w-8 text-right">0:00</span>
+                    <input type="range" id="progress-bar" value="0" min="0" max="100" class="flex-1">
+                    <span id="total-time" class="text-[10px] text-gray-400 font-mono w-8">0:00</span>
+                </div>
+            </div>
+            <!-- Volume -->
+            <div class="flex items-center justify-end gap-3 w-full md:w-1/4">
+                <button onclick="downloadCurrent()" class="text-gray-400 hover-accent transition tooltip" title="Descargar"><i data-lucide="download" class="w-4 h-4"></i></button>
+                <button onclick="toggleMute()" class="text-gray-400 hover:text-white"><i id="volume-icon" data-lucide="volume-2" class="w-4 h-4"></i></button>
+                <input type="range" id="volume-bar" oninput="setVolume(this.value)" min="0" max="1" step="0.01" value="0.8" class="w-20 h-1 rounded-full">
+            </div>
+        </div>
+    </div>
+
+    <audio id="audio-source"></audio>
+
+    <script>
+        // ==========================================
+        // --- 1. TU MÚSICA (AQUÍ PERSONALIZAS LAS LETRAS) ---
+        // ==========================================
+        const library = [
+            {
+                title: "CRAZZZY", 
+                year: "2025",
+                cover: "https://i.imgur.com/EtzRMLr.jpeg",
+                tracks: [
+                    { 
+                        title: "**** ME!", 
+                        length: "3:24", 
+                        url: "https://www.dropbox.com/scl/fi/q7ec2wlw2mioxzyjm132o/______ME-1.wav?rlkey=0t6ac82giiuo2iijrymrm8vm4&st=2nmevgrd&raw=1",
+                        // 👇 AQUÍ ESCRIBES LA LETRA SINCRONIZADA 👇
+                        lyrics: [
+                            { time: 0, text: "Break me, break me, hate me" }, // Intro instrumental
+                            { time: 2.5, text: "Break, Take me" },
+                            { time: 4, text: "Break me you, take me" },
+                            { time: 5, text: "Take me, break me, hate me" },
+                            { time: 7, text: "Break, take me, break me you" },
+                            { time: 10, text: "..."},
+                            // Añade más líneas aquí: { time: SEGUNDOS, text: "FRASE" },
+                            { time: 19, text: "Break me, br-break me" },
+                            { time: 21, text: "Break me, Break me" },
+                            { time: 24, text: "Take me, take me" },
+                            { time: 25, text: "Ohh abuse me"},
+                            { time: 26, text: "Use me, use me"},
+                            { time: 28, text: "Use me, use me"},
+                            { time: 30, text: "I'm a body made for damage"},
+                            { time: 32, text: "Kill me, kill me"},
+                            { time: 35, text: "You don't even have to touch me"},
+                            { time: 37, text: "Bend me, bend me"},
+                            { time: 39.8, text: "Baby I break, so take me"},
+                            { time: 43, text: "..."},
+                            { time: 63, text: "Flex me, flex me"},
+                            { time: 66, text: "Let my bones turn into static"},
+                            { time: 68, text: "Tear me, tear me"},
+                            { time: 71, text: "I was never built to manage"},
+                            { time: 74, text: "Break me, take me"},
+                            { time: 76, text: "Use me, crash me"},
+                            { time: 79, text: "Spin me till I'm nothing"},
+                            { time: 81, text: "Love me till It's rotting"},
+                            { time: 85, text: "..."},
+                            { time: 95, text: "Break me, break me"},
+                            { time: 97, text: "Im still saying BABY I'M YOURS"},
+                            { time: 100, text: "Use me, use me"},
+                            { time: 101, text: "Use, crashing me"},
+                            { time: 103, text: "You always slammed"},
+                            { time: 105, text: "Crash me, crash me"},
+                            { time: 108, text: "I'm a hearth you never planned"},
+                            { time: 110, text: "Use me, use me" },
+                            { time: 113, text: "Looking at you *******"},
+                            { time: 116, text: "..."},
+                            { time: 136, text: "Break me, break me"},
+                            { time: 141, text: "Trust me, cares you, trust me"},
+                            { time: 143, text: "Crash me, I'm a body made for damage"},
+                            { time: 146, text: "Kill me, kill me"},
+                            { time: 149, text: "You don't even have to touch me"},
+                            { time: 151, text: "Crash me, crash me"},
+                            { time: 154, text: "Baby I break so gently"},
+                            { time: 156, text: "..."},
+                            { time: 166, text: "Flex me, flex me"},
+                            { time: 169, text: "Let my body turn into static"},
+                            { time: 171, text: "Tell me, tell me"},
+                            { time: 173, text: "I was never built to ****"},
+                            { time: 175, text: "..."},
+                            { time: 185, text: "Break me, break me"},
+                            { time: 187, text: "I still saying BABY I'M YOURS"},
+                            { time: 189, text: "Use me, use me, ****** me"},
+                            { time: 192, text: "I kill you, always slammed"},
+                            { time: 194, text: "Crash me, crash me"},
+                            { time: 196, text: "I'm a hearth you never planned"},
+                            { time: 200, text: ""},
+                        ]
+                    },
+                    { 
+                        title: "Fuck It!", 
+                        length: "1:51", 
+                        url: "https://www.dropbox.com/scl/fi/gkodxpb4mo7kwbezlz7c2/Fuck-It.mp3?rlkey=rz125yi08uklz93q8zpl1758p&st=wfs5xrn5&raw=1",
+                        // 👇 RELLENA ESTO CON TU LETRA REAL 👇
+                        lyrics: [
+                            { time: 0, text: "No dispoible" },
+
+                        ]
+                    },
+                    { 
+                        title: "i love the pain", 
+                        length: "1:54", 
+                        url: "https://www.dropbox.com/scl/fi/jbzrlwdjbeq1owijf1lva/i-love-the-pain.mp3?rlkey=2ye99czaqoae1dmwueglwurk4&st=1nwdm9ho&raw=1",
+                        // 👇 RELLENA ESTO 👇
+                        lyrics: [
+                            { time: 0, text: "No dispoible" },
+                        ]
+                    }
+                ]
+            },
+            {
+                title: "Depressed Cats",
+                year: "2025",
+                cover: "https://i.imgur.com/5bKNYt9.jpeg",
+                tracks: [
+                    { 
+                        title: "NO DUERMO", 
+                        length: "2:46", 
+                        url: "https://www.dropbox.com/scl/fi/ks4ip2r2e41q0vd2gw1nw/NO_DUERMO_Demo.wav?rlkey=4xcigbyosqha407o7x93dkvxf&st=gq9nyh2u&raw=1",
+                        // 👇 RELLENA ESTO 👇
+                        lyrics: [
+                            { time: 0, text: "No dispoible" },
+                        ]
+                    },
+                    { 
+                        title: "YOUR SIGNS", 
+                        length: "2:18", 
+                        url: "https://www.dropbox.com/scl/fi/7w9z52hexys48ymrmxam7/YOUR_SIGNS-2.wav?rlkey=ar7kh8fapfmdql1gzugd7w62w&st=nlp2lcoh&raw=1",
+                        // 👇 RELLENA ESTO 👇
+                        lyrics: [
+                            { time: 0, text: "No dispoible" },
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        // ==========================================
+        // --- STATE ---
+        let globalPlaylist = []; 
+        let playbackContext = { type: 'album', id: 0 }; 
+        let currentTrackIdx = 0;
+        let currentPlayingTrack = null; // Stores full track object
+        let loopState = 0; 
+        let isEditingPlaylist = false;
+        const audio = document.getElementById('audio-source');
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initGlobalPlaylist();
+            renderSidebar();
+            loadAlbumView(0);
+            updateSliderVisual(document.getElementById('volume-bar'));
+            updateSliderVisual(document.getElementById('progress-bar'));
+            lucide.createIcons();
+        });
+
+        function initGlobalPlaylist() {
+            let idCounter = 0;
+            library.forEach((album, albIdx) => {
+                album.tracks.forEach((track, trkIdx) => {
+                    globalPlaylist.push({
+                        ...track,
+                        albumIdx: albIdx,
+                        originalTrackIdx: trkIdx,
+                        cover: album.cover,
+                        id: idCounter++,
+                        isEnabled: true
+                    });
+                });
+            });
+        }
+
+        // --- LYRICS LOGIC ---
+        function toggleLyrics() {
+            const overlay = document.getElementById('lyrics-overlay');
+            if(overlay.classList.contains('opacity-0')) {
+                overlay.classList.remove('opacity-0', 'invisible');
+                renderLyrics(); // Refresh
+            } else {
+                overlay.classList.add('opacity-0', 'invisible');
+            }
+        }
+
+        function renderLyrics() {
+            const container = document.getElementById('lyrics-container');
+            const cover = document.getElementById('lyrics-cover');
+            
+            if(!currentPlayingTrack) return;
+
+            cover.src = currentPlayingTrack.cover || library[currentPlayingTrack.albumIdx].cover;
+
+            if(!currentPlayingTrack.lyrics) {
+                container.innerHTML = `<div class="text-gray-500 text-2xl font-bold mt-20">Letra no disponible para esta canción.</div>`;
+                return;
+            }
+
+            container.innerHTML = currentPlayingTrack.lyrics.map((line, idx) => `
+                <div class="lyric-line" id="line-${idx}" onclick="seekTo(${line.time})">
+                    ${line.text}
+                </div>
+            `).join('');
+        }
+
+        function updateLyrics(currentTime) {
+            if(!currentPlayingTrack || !currentPlayingTrack.lyrics) return;
+
+            // Find current line
+            // A line is active if currentTime >= line.time AND currentTime < nextLine.time
+            const lyrics = currentPlayingTrack.lyrics;
+            let activeIdx = -1;
+
+            for(let i = 0; i < lyrics.length; i++) {
+                if(currentTime >= lyrics[i].time) {
+                    activeIdx = i;
+                } else {
+                    break; // Passed the time
+                }
+            }
+
+            // Update UI
+            document.querySelectorAll('.lyric-line').forEach(el => el.classList.remove('lyric-active'));
+            
+            if(activeIdx !== -1) {
+                const activeEl = document.getElementById(`line-${activeIdx}`);
+                if(activeEl) {
+                    activeEl.classList.add('lyric-active');
+                    // Smooth scroll to center
+                    activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+
+        function seekTo(seconds) {
+            audio.currentTime = seconds;
+            audio.play(); // Ensure playing if clicked
+        }
+
+        // --- RENDERERS ---
+        function renderSidebar() {
+            const container = document.getElementById('album-list');
+            let html = `
+                <div onclick="loadGlobalView()" class="glass-card p-3 flex items-center gap-4 cursor-pointer hover:bg-white/5 transition group mb-6 border border-emerald-500/30" id="nav-global">
+                    <div class="w-16 h-16 rounded-md bg-emerald-900/50 flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+                        <i data-lucide="list-music" class="w-8 h-8 text-emerald-400"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-white leading-tight">Todas las Canciones</h4>
+                        <span class="text-xs text-gray-400">${globalPlaylist.length} Tracks</span>
+                    </div>
+                </div>
+            `;
+            
+            library.forEach((album, idx) => {
+                html += `
+                <div onclick="loadAlbumView(${idx})" class="glass-card p-3 flex items-center gap-4 cursor-pointer hover:bg-white/5 transition group" id="nav-album-${idx}">
+                    <img src="${album.cover}" class="w-16 h-16 rounded-md object-cover shadow-md group-hover:scale-105 transition-transform">
+                    <div>
+                        <h4 class="font-bold text-white leading-tight">${album.title}</h4>
+                        <span class="text-xs text-gray-400">${album.year}</span>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function loadAlbumView(idx) {
+            document.querySelectorAll('[id^="nav-"]').forEach(el => el.classList.remove('bg-white/5', 'border-emerald-500/50'));
+            document.getElementById(`nav-album-${idx}`).classList.add('bg-white/5', 'border-emerald-500/50');
+            document.getElementById('playlist-controls').classList.add('hidden');
+            isEditingPlaylist = false;
+
+            const album = library[idx];
+            document.getElementById('view-subtitle').innerText = "ÁLBUM";
+            document.getElementById('view-title').innerText = album.title;
+            document.getElementById('view-meta').innerText = `${album.year} • ${album.tracks.length} Canciones`;
+
+            const list = document.getElementById('track-list');
+            list.innerHTML = album.tracks.map((track, i) => createTrackHTML(track, i, false, false)).join('');
+            
+            playbackContext.tempType = 'album'; 
+            playbackContext.tempId = idx;
+            
+            refreshActiveTrackVisuals();
+            lucide.createIcons();
+        }
+
+        function loadGlobalView() {
+            document.querySelectorAll('[id^="nav-"]').forEach(el => el.classList.remove('bg-white/5', 'border-emerald-500/50'));
+            document.getElementById(`nav-global`).classList.add('bg-white/5', 'border-emerald-500/50');
+            document.getElementById('playlist-controls').classList.remove('hidden');
+
+            document.getElementById('view-subtitle').innerText = "LISTA DE REPRODUCCIÓN";
+            document.getElementById('view-title').innerText = "Todas las Canciones";
+            document.getElementById('view-meta').innerText = "Cola Global Personalizable";
+
+            playbackContext.tempType = 'playlist';
+            playbackContext.tempId = 0; 
+            renderGlobalTracks();
+        }
+
+        function renderGlobalTracks() {
+            const list = document.getElementById('track-list');
+            const tracksToShow = isEditingPlaylist ? globalPlaylist : globalPlaylist.filter(t => t.isEnabled);
+            list.innerHTML = tracksToShow.map((track, i) => createTrackHTML(track, i, true, isEditingPlaylist)).join('');
+            refreshActiveTrackVisuals();
+            lucide.createIcons();
+        }
+
+        function createTrackHTML(track, index, isGlobal, isEditing) {
+            let controls = '';
+            let rowClass = isEditing ? (track.isEnabled ? '' : 'disabled-track') : '';
+
+            if (isEditing) {
+                controls = `
+                    <div class="flex items-center gap-2 mr-4" onclick="event.stopPropagation()">
+                        <button onclick="toggleTrackVisibility(${index})" class="p-1 hover:text-white text-gray-400">
+                            <i data-lucide="${track.isEnabled ? 'eye' : 'eye-off'}" class="w-4 h-4"></i>
+                        </button>
+                        <div class="flex flex-col gap-1">
+                            <button onclick="moveTrack(${index}, -1)" class="hover:text-emerald-400 text-gray-500"><i data-lucide="chevron-up" class="w-3 h-3"></i></button>
+                            <button onclick="moveTrack(${index}, 1)" class="hover:text-emerald-400 text-gray-500"><i data-lucide="chevron-down" class="w-3 h-3"></i></button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return `
+                <div onclick="${isEditing ? '' : `playFromList(${index})`}" class="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 cursor-pointer group transition-colors track-item ${rowClass}" id="track-row-${index}">
+                    <div class="flex items-center gap-4">
+                        ${controls}
+                        <span class="text-gray-500 font-mono text-sm w-4 group-hover:text-emerald-500 transition-colors">${isEditing ? '' : index + 1}</span>
+                        <div class="flex flex-col">
+                            <h4 class="font-medium text-gray-200 group-hover:text-white transition-colors">${track.title}</h4>
+                            <div class="flex gap-1 h-3 items-end stopped audio-visualizer mt-1 opacity-0">
+                                <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <span class="text-sm text-gray-500 font-mono">${track.length}</span>
+                        ${!isEditing ? `<button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover-accent"><i data-lucide="play-circle" class="w-5 h-5"></i></button>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function playFromList(index) {
+            if (document.getElementById('view-title').innerText === "Todas las Canciones") {
+                playbackContext.type = 'playlist';
+                playbackContext.id = 0;
+                const tracks = isEditingPlaylist ? globalPlaylist : globalPlaylist.filter(t => t.isEnabled);
+                currentTrackIdx = index;
+                playTrackData(tracks[index]);
+            } else {
+                const albumIdx = playbackContext.tempId; 
+                playbackContext.type = 'album';
+                playbackContext.id = albumIdx;
+                currentTrackIdx = index;
+                const track = library[albumIdx].tracks[index];
+                playTrackData({ ...track, cover: library[albumIdx].cover, albumIdx: albumIdx });
+            }
+        }
+
+        function playTrackData(track) {
+            currentPlayingTrack = track; // Store for lyrics
+            audio.src = track.url;
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => console.log("Playback interrupted"));
+            }
+
+            document.getElementById('player-img').src = track.cover || library[track.albumIdx]?.cover || "";
+            document.getElementById('player-title').innerText = track.title;
+            
+            document.getElementById('play-icon').setAttribute('data-lucide', 'pause');
+            refreshActiveTrackVisuals();
+            
+            // Update lyrics if open
+            if(!document.getElementById('lyrics-overlay').classList.contains('invisible')) {
+                renderLyrics();
+            }
+            
+            lucide.createIcons();
+        }
+
+        function refreshActiveTrackVisuals() {
+            document.querySelectorAll('.track-item').forEach(el => el.classList.remove('active-track'));
+            document.querySelectorAll('.audio-visualizer').forEach(el => {
+                el.classList.add('opacity-0', 'stopped');
+                el.classList.remove('playing');
+            });
+
+            const isViewMatch = (playbackContext.type === playbackContext.tempType) && (playbackContext.id === playbackContext.tempId);
+
+            if (isViewMatch) {
+                const row = document.getElementById(`track-row-${currentTrackIdx}`);
+                if(row) {
+                    row.classList.add('active-track');
+                    const vis = row.querySelector('.audio-visualizer');
+                    if(vis) {
+                        vis.classList.remove('opacity-0', 'stopped');
+                        vis.classList.add('playing');
+                        vis.style.animationPlayState = audio.paused ? 'paused' : 'running';
+                    }
+                }
+            }
+        }
+
+        function togglePlay() {
+            if (audio.paused) {
+                if(!audio.src) {
+                    loadGlobalView();
+                    playFromList(0);
+                } else {
+                    audio.play();
+                    document.getElementById('play-icon').setAttribute('data-lucide', 'pause');
+                    document.querySelectorAll('.playing').forEach(el => el.style.animationPlayState = 'running');
+                }
+            } else {
+                audio.pause();
+                document.getElementById('play-icon').setAttribute('data-lucide', 'play');
+                document.querySelectorAll('.playing').forEach(el => el.style.animationPlayState = 'paused');
+            }
+            lucide.createIcons();
+        }
+
+        function toggleEditMode() {
+            isEditingPlaylist = !isEditingPlaylist;
+            const btn = document.getElementById('edit-btn');
+            if(isEditingPlaylist) {
+                btn.classList.add('bg-emerald-600', 'text-white', 'border-transparent');
+                btn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> <span>Guardar</span>`;
+            } else {
+                btn.classList.remove('bg-emerald-600', 'text-white', 'border-transparent');
+                btn.innerHTML = `<i data-lucide="pencil" class="w-4 h-4"></i> <span>Editar Lista</span>`;
+            }
+            renderGlobalTracks();
+        }
+
+        function toggleTrackVisibility(idx) {
+            globalPlaylist[idx].isEnabled = !globalPlaylist[idx].isEnabled;
+            renderGlobalTracks();
+        }
+
+        function moveTrack(fromIdx, direction) {
+            const toIdx = fromIdx + direction;
+            if (toIdx < 0 || toIdx >= globalPlaylist.length) return;
+            const temp = globalPlaylist[fromIdx];
+            globalPlaylist[fromIdx] = globalPlaylist[toIdx];
+            globalPlaylist[toIdx] = temp;
+            renderGlobalTracks();
+        }
+
+        function nextTrack(auto = false) {
+            let nextIndex = currentTrackIdx + 1;
+            let listLength = 0;
+
+            if (playbackContext.type === 'album') {
+                listLength = library[playbackContext.id].tracks.length;
+            } else {
+                const tracks = globalPlaylist.filter(t => t.isEnabled);
+                listLength = tracks.length;
+            }
+
+            if (nextIndex >= listLength) {
+                if(loopState === 1) playFromList(0);
+                else if (loopState === 0 && auto) {
+                    document.getElementById('play-icon').setAttribute('data-lucide', 'play');
+                    lucide.createIcons();
+                } else if (!auto) playFromList(0);
+            } else {
+                playFromList(nextIndex);
+            }
+        }
+
+        function prevTrack() {
+            if(audio.currentTime > 3) {
+                audio.currentTime = 0;
+            } else {
+                let prevIndex = currentTrackIdx - 1;
+                let listLength = 0;
+                if (playbackContext.type === 'album') listLength = library[playbackContext.id].tracks.length;
+                else listLength = globalPlaylist.filter(t => t.isEnabled).length;
+
+                if (prevIndex < 0) prevIndex = listLength - 1;
+                playFromList(prevIndex);
+            }
+        }
+
+        audio.addEventListener('ended', () => {
+            if(loopState === 2) { audio.currentTime = 0; audio.play(); } 
+            else nextTrack(true);
+        });
+
+        audio.addEventListener('timeupdate', () => {
+            const progress = document.getElementById('progress-bar');
+            if(!isNaN(audio.duration)) {
+                const val = (audio.currentTime / audio.duration) * 100;
+                progress.value = val;
+                updateSliderVisual(progress);
+                document.getElementById('current-time').innerText = formatTime(audio.currentTime);
+                document.getElementById('total-time').innerText = formatTime(audio.duration);
+                
+                // Update Lyrics if visible
+                if(!document.getElementById('lyrics-overlay').classList.contains('invisible')) {
+                    updateLyrics(audio.currentTime);
+                }
+            }
+        });
+
+        function toggleLoop() {
+            loopState = (loopState + 1) % 3;
+            const btn = document.getElementById('btn-loop');
+            btn.className = "hover:scale-110 transition p-2";
+            if(loopState === 0) { btn.classList.add('loop-off'); btn.title = "Off"; }
+            else if(loopState === 1) { btn.classList.add('loop-album'); btn.title = "Loop List"; }
+            else { btn.classList.add('loop-song'); btn.title = "Loop Song"; }
+        }
+
+        function updateSliderVisual(slider) {
+            const val = (slider.value - slider.min) / (slider.max - slider.min) * 100;
+            slider.style.backgroundSize = `${val}% 100%`;
+        }
+        
+        document.getElementById('progress-bar').addEventListener('input', (e) => {
+            audio.currentTime = (e.target.value / 100) * audio.duration;
+            updateSliderVisual(e.target);
+        });
+
+        function setVolume(val) {
+            audio.volume = val;
+            updateSliderVisual(document.getElementById('volume-bar'));
+        }
+        
+        function toggleMute() {
+            if(audio.volume > 0) { audio.lastVol = audio.volume; setVolume(0); document.getElementById('volume-bar').value = 0; }
+            else { setVolume(audio.lastVol || 0.8); document.getElementById('volume-bar').value = audio.lastVol || 0.8; }
+        }
+
+        function downloadCurrent() {
+            if(audio.src) {
+                const link = document.createElement('a');
+                link.href = audio.src;
+                link.setAttribute('download', '');
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        function playRandom() {
+            loadGlobalView();
+            const tracks = globalPlaylist.filter(t => t.isEnabled);
+            const r = Math.floor(Math.random() * tracks.length);
+            playFromList(r);
+        }
+
+        function formatTime(s) {
+            const m = Math.floor(s/60);
+            const sc = Math.floor(s%60);
+            return m + ":" + (sc < 10 ? '0' : '') + sc;
+        }
+    </script>
+</body>
+</html>
